@@ -20,7 +20,7 @@ ARTIFACTS := _out
 TOOLS ?= ghcr.io/siderolabs/tools:v1.8.0-alpha.0-8-ga764e8d
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-PKGS ?= v1.8.0-alpha.0-49-g5f919c5
+PKGS ?= v1.8.0-alpha.0-51-g467d127
 EXTRAS ?= v1.8.0-alpha.0-5-g6f4a373
 
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
@@ -76,6 +76,10 @@ VTPROTOBUF_VERSION ?= v0.6.0
 DEEPCOPY_VERSION ?= v0.5.6
 # renovate: datasource=go depName=github.com/siderolabs/importvet
 IMPORTVET_VERSION ?= v0.2.0
+# not setting renovate config since the repo is archived
+PROTOTOOL_VERSION ?= v1.10.0
+# renovate: datasource=go depName=github.com/pseudomuto/protoc-gen-doc
+PROTOC_GEN_DOC_VERSION ?= v1.5.1
 # renovate: datasource=npm depName=markdownlint-cli
 MARKDOWNLINTCLI_VERSION ?= 0.40.0
 # renovate: datasource=npm depName=textlint
@@ -161,6 +165,8 @@ COMMON_ARGS += --build-arg=ENUMER_VERSION=$(ENUMER_VERSION)
 COMMON_ARGS += --build-arg=DEEPCOPY_GEN_VERSION=$(DEEPCOPY_GEN_VERSION)
 COMMON_ARGS += --build-arg=VTPROTOBUF_VERSION=$(VTPROTOBUF_VERSION)
 COMMON_ARGS += --build-arg=IMPORTVET_VERSION=$(IMPORTVET_VERSION)
+COMMON_ARGS += --build-arg=PROTOTOOL_VERSION=$(PROTOTOOL_VERSION)
+COMMON_ARGS += --build-arg=PROTOC_GEN_DOC_VERSION=$(PROTOC_GEN_DOC_VERSION)
 COMMON_ARGS += --build-arg=GOLANGCILINT_VERSION=$(GOLANGCILINT_VERSION)
 COMMON_ARGS += --build-arg=DEEPCOPY_VERSION=$(DEEPCOPY_VERSION)
 COMMON_ARGS += --build-arg=MARKDOWNLINTCLI_VERSION=$(MARKDOWNLINTCLI_VERSION)
@@ -219,6 +225,8 @@ COMMON_ARGS += --build-arg=ZSTD_COMPRESSION_LEVEL=$(ZSTD_COMPRESSION_LEVEL)
 COMMON_ARGS += --build-arg=MICROSOFT_SECUREBOOT_RELEASE=$(MICROSOFT_SECUREBOOT_RELEASE)
 
 CI_ARGS ?=
+
+EXTENSIONS_FILTER_COMMAND ?= grep -vE 'tailscale|xen-guest-agent|nvidia|vmtoolsd-guest-agent'
 
 all: initramfs kernel installer imager talosctl talosctl-image talos
 
@@ -387,7 +395,7 @@ image-%: ## Builds the specified image. Valid options are aws, azure, digital-oc
 
 images-essential: image-aws image-azure image-gcp image-metal secureboot-installer ## Builds only essential images used in the CI (AWS, GCP, and Metal).
 
-images: image-akamai image-aws image-azure image-digital-ocean image-exoscale image-gcp image-hcloud image-iso image-metal image-nocloud image-opennebula image-openstack image-oracle image-scaleway image-upcloud image-vmware image-vultr ## Builds all known images (AWS, Azure, DigitalOcean, Exoscale, GCP, HCloud, Metal, NoCloud, OpenNebula, OpenStack, Oracle, Scaleway, UpCloud, Vultr and VMware).
+images: image-akamai image-aws image-azure image-digital-ocean image-exoscale image-cloudstack image-gcp image-hcloud image-iso image-metal image-nocloud image-opennebula image-openstack image-oracle image-scaleway image-upcloud image-vmware image-vultr ## Builds all known images (AWS, Azure, DigitalOcean, Exoscale, Cloudstack, GCP, HCloud, Metal, NoCloud, OpenNebula, OpenStack, Oracle, Scaleway, UpCloud, Vultr and VMware).
 
 .PHONY: iso
 iso: image-iso ## Builds the ISO and outputs it to the artifact directory.
@@ -536,9 +544,9 @@ provision-tests-track-%:
 
 installer-with-extensions: $(ARTIFACTS)/extensions/_out/extensions-metadata
 	$(MAKE) image-installer \
-		IMAGER_ARGS="--base-installer-image=$(REGISTRY_AND_USERNAME)/installer:$(IMAGE_TAG) $(shell cat $(ARTIFACTS)/extensions/_out/extensions-metadata | grep -vE 'tailscale|xen-guest-agent|nvidia|vmtoolsd-guest-agent' | xargs -n 1 echo --system-extension-image)"
+		IMAGER_ARGS="--base-installer-image=$(REGISTRY_AND_USERNAME)/installer:$(IMAGE_TAG) $(shell cat $(ARTIFACTS)/extensions/_out/extensions-metadata | $(EXTENSIONS_FILTER_COMMAND) | xargs -n 1 echo --system-extension-image)"
 	crane push $(ARTIFACTS)/installer-amd64.tar $(REGISTRY_AND_USERNAME)/installer:$(IMAGE_TAG)-amd64-extensions
-	echo -n "$(REGISTRY_AND_USERNAME)/installer:$(IMAGE_TAG)-amd64-extensions" | jq -Rs -f hack/test/extensions/extension-patch-filter.jq | yq eval ".[] | split_doc" -P > $(ARTIFACTS)/extensions-patch.yaml
+	INSTALLER_IMAGE_EXTENSIONS="$(REGISTRY_AND_USERNAME)/installer:$(IMAGE_TAG)-amd64-extensions" yq eval -n '.machine.install.image = strenv(INSTALLER_IMAGE_EXTENSIONS)' > $(ARTIFACTS)/installer-extensions-patch.yaml
 
 # Assets for releases
 

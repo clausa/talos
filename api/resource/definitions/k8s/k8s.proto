@@ -3,6 +3,7 @@ syntax = "proto3";
 package talos.resource.definitions.k8s;
 
 option go_package = "github.com/siderolabs/talos/pkg/machinery/api/resource/definitions/k8s";
+option java_package = "dev.talos.api.resource.definitions.k8s";
 
 import "common/common.proto";
 import "google/protobuf/struct.proto";
@@ -59,7 +60,6 @@ message BootstrapManifestsConfigSpec {
   repeated string flannel_extra_args = 16;
   string flannel_kube_service_host = 17;
   string flannel_kube_service_port = 18;
-  string service_host_dns_address = 19;
 }
 
 // ConfigStatusSpec describes status of rendered secrets.

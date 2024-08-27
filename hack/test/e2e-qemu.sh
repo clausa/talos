@@ -116,7 +116,11 @@ case "${WITH_CONFIG_PATCH:-false}" in
   false)
     ;;
   *)
-    QEMU_FLAGS+=("--config-patch=${WITH_CONFIG_PATCH}")
+    [[ ! ${WITH_CONFIG_PATCH} =~ ^@ ]] && echo "WITH_CONFIG_PATCH variable should start with @" && exit 1
+
+    for i in ${WITH_CONFIG_PATCH//:/ }; do
+      QEMU_FLAGS+=("--config-patch=${i}")
+    done
     ;;
 esac
 
@@ -124,15 +128,19 @@ case "${WITH_CONFIG_PATCH_WORKER:-false}" in
   false)
     ;;
   *)
-    QEMU_FLAGS+=("--config-patch-worker=${WITH_CONFIG_PATCH_WORKER}")
+    [[ ! ${WITH_CONFIG_PATCH_WORKER} =~ ^@ ]] && echo "WITH_CONFIG_PATCH_WORKER variable should start with @" && exit 1
+
+    for i in ${WITH_CONFIG_PATCH_WORKER//:/ }; do
+      QEMU_FLAGS+=("--config-patch-worker=${i}")
+    done
     ;;
 esac
 
-case "${WITH_SKIP_BOOT_PHASE_FINISHED_CHECK:-false}" in
+case "${WITH_SKIP_K8S_NODE_READINESS_CHECK:-false}" in
   false)
     ;;
   *)
-    QEMU_FLAGS+=("--skip-boot-phase-finished-check")
+    QEMU_FLAGS+=("--skip-k8s-node-readiness-check")
     ;;
 esac
 
